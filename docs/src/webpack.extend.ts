@@ -40,7 +40,7 @@ export default function webpackExtendPlugin(): Plugin<void> {
             '@docs/components': path.resolve(__dirname, '../src/components'),
             '@superset/components': path.resolve(
               __dirname,
-              '../../superset-frontend/src/components',
+              '../../superset-frontend/packages/superset-ui-core/src/components',
             ),
             // Add proper Storybook aliases
             '@storybook/blocks': path.resolve(
