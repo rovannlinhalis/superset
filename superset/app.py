@@ -33,6 +33,7 @@ else:
 from flask import Flask
 from werkzeug.exceptions import NotFound
 
+from superset.config_extensions import SupersetConfig
 from superset.initialization import SupersetAppInitializer
 
 logger = logging.getLogger(__name__)
@@ -50,6 +51,14 @@ def create_app(
             "SUPERSET_CONFIG", "superset.config"
         )
         app.config.from_object(config_module)
+
+        # Load environment variables with SUPERSET__ prefix (note double underscore)
+        # This uses Flask's built-in from_prefixed_env method which provides:
+        # - Automatic JSON parsing for complex types
+        # - Support for nested dicts using triple underscore (___)
+        # - Sorted key loading for consistent behavior
+        if isinstance(app.config, SupersetConfig):
+            app.config.load_from_environment()
 
         # Allow application to sit on a non-root path
         # *Please be advised that this feature is in BETA.*
@@ -77,7 +86,7 @@ def create_app(
 
 
 class SupersetApp(Flask):
-    pass
+    config_class = SupersetConfig
 
 
 class AppRootMiddleware:
