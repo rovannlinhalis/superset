@@ -21,17 +21,16 @@ in your PYTHONPATH as there is a ``from superset_config import *``
 at the end of this file.
 """
 
-# Import all configuration from the new config structure
-# We need to import the defaults module and explicitly copy all attributes
-# because star imports don't always work reliably with this pattern
+# Configuration loading is now handled by Flask's native methods in app.py
+# This module serves as the default configuration loaded by Flask's from_object()
+# The loading order and precedence is:
+# 1. Flask loads this module (superset.config) via from_object()
+# 2. Flask loads from SUPERSET_CONFIG_PATH via from_pyfile() if set
+# 3. Flask loads superset_config module via from_object() if available
+# 4. Flask loads environment variables with SUPERSET__ prefix via from_prefixed_env()
 
-# Copy all public attributes from defaults to this module
-import sys
+# Load all defaults from config_defaults.py (one-liner with Flask's from_object)
+from superset.config_defaults import *  # noqa: F401,F403
 
-import superset.config_defaults as _defaults_module
+# Explicitly import these attributes to ensure they are available for mypy
 from superset.config_extensions import SupersetConfig  # noqa: F401
-
-_this_module = sys.modules[__name__]
-for _attr_name in dir(_defaults_module):
-    if not _attr_name.startswith("_"):
-        setattr(_this_module, _attr_name, getattr(_defaults_module, _attr_name))
