@@ -21,14 +21,13 @@ import { Button, JsonEditor } from '@superset-ui/core/components';
 import {
   themeObject,
   exampleThemes,
+  logging,
   SerializableThemeConfig,
   Theme,
   AnyThemeConfig,
 } from '@superset-ui/core';
 import { useState } from 'react';
 import { Icons } from '@superset-ui/core/components/Icons';
-import logging from '../../utils/logging';
-
 interface ThemeEditorProps {
   tooltipTitle?: string;
   modalTitle?: string;
