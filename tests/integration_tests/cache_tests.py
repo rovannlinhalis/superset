@@ -47,7 +47,7 @@ class TestCache(SupersetTestCase):
         app.config["DATA_CACHE_CONFIG"] = {"CACHE_TYPE": "NullCache"}
         cache_manager.init_app(app)
 
-        slc = self.get_slice("Pivot Table v2")
+        slc = self.get_slice("Genders")
 
         # Get chart metadata
         metadata = self.get_json_resp(f"api/v1/chart/{slc.id}")
@@ -83,7 +83,7 @@ class TestCache(SupersetTestCase):
         }
         cache_manager.init_app(app)
 
-        slc = self.get_slice("Pivot Table v2")
+        slc = self.get_slice("Genders")
 
         # Get chart metadata
         metadata = self.get_json_resp(f"api/v1/chart/{slc.id}")
