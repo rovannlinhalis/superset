@@ -353,7 +353,7 @@ AUTH_RATE_LIMIT = "5 per second"
 # GLOBALS FOR APP Builder
 # ------------------------------
 # Uncomment to setup Your App name
-APP_NAME = "Superset"
+APP_NAME = os.getenv("SUPERSET_APP_NAME", "linhalis")
 
 # Specify the App icon
 APP_ICON = "/static/assets/images/superset-logo-horiz.png"
@@ -365,7 +365,7 @@ APP_ICON = "/static/assets/images/superset-logo-horiz.png"
 LOGO_TARGET_PATH = None
 
 # Specify tooltip that should appear when hovering over the App Icon/Logo
-LOGO_TOOLTIP = ""
+LOGO_TOOLTIP = os.getenv("SUPERSET_LOGO_TOOLTIP", APP_NAME)
 
 # Specify any text that should appear to the right of the logo
 LOGO_RIGHT_TEXT: Callable[[], str] | str = ""
@@ -518,7 +518,7 @@ class D3TimeFormat(TypedDict, total=False):
 
 D3_TIME_FORMAT: D3TimeFormat = {}
 
-CURRENCIES = ["USD", "EUR", "GBP", "INR", "MXN", "JPY", "CNY"]
+CURRENCIES = ["BRL","USD", "EUR", "GBP", "INR", "MXN", "JPY", "CNY"]
 
 # ---------------------------------------------------
 # Feature flags
@@ -907,7 +907,28 @@ COMMON_BOOTSTRAP_OVERRIDES_FUNC: Callable[  # noqa: E731
 #     }]
 
 # This is merely a default
-EXTRA_CATEGORICAL_COLOR_SCHEMES: list[dict[str, Any]] = []
+EXTRA_CATEGORICAL_COLOR_SCHEMES: list[dict[str, Any]] = [
+    {
+        "id": "linhalis",
+        "label": "linhalis",
+        "description": "Paleta Linhalis para gráficos categóricos",
+        "isDefault": True,
+        "colors": [
+            "#102A43",
+            "#13577A",
+            "#159CC5",
+            "#AEEBFA",
+            "#DDF7FF",
+            "#0B3A57",
+            "#1E7898",
+            "#42C7E8",
+            "#6FDDF4",
+            "#7EA6B8",
+            "#174767",
+            "#ECFBFF",
+        ],
+    },
+]
 
 # -----------------------------------------------------------------------------
 # Theme System Configuration
@@ -932,12 +953,21 @@ EXTRA_CATEGORICAL_COLOR_SCHEMES: list[dict[str, Any]] = []
 
 # Default theme configuration - foundation for all themes
 # This acts as the base theme for all users
+_LINHALIS_NAVY = "#102A43"
+_LINHALIS_NAVY_DEEP = "#061827"
+_LINHALIS_BLUE = "#13577A"
+_LINHALIS_CYAN = "#159CC5"
+_LINHALIS_CYAN_HOVER = "#2BBCE2"
+_LINHALIS_CYAN_ACTIVE = "#0F7EA3"
+_LINHALIS_ICE = "#DDF7FF"
+_LINHALIS_SKY = "#AEEBFA"
+
 THEME_DEFAULT: Theme = {
     "token": {
         # Brand
         # Application name for window titles
         "brandAppName": APP_NAME,
-        "brandLogoAlt": "Apache Superset",
+        "brandLogoAlt": APP_NAME,
         "brandLogoUrl": APP_ICON,
         "brandLogoMargin": "18px 0",
         "brandLogoHref": "/",
@@ -946,12 +976,23 @@ THEME_DEFAULT: Theme = {
         "brandSpinnerUrl": None,
         "brandSpinnerSvg": None,
         # Default colors
-        "colorPrimary": "#2893B3",  # NOTE: previous lighter primary color was #20a7c9 # noqa: E501
-        "colorLink": "#2893B3",
-        "colorError": "#e04355",
-        "colorWarning": "#fcc700",
-        "colorSuccess": "#5ac189",
-        "colorInfo": "#66bcfe",
+        "colorPrimary": _LINHALIS_CYAN,
+        "colorPrimaryHover": _LINHALIS_CYAN_HOVER,
+        "colorPrimaryActive": _LINHALIS_CYAN_ACTIVE,
+        "colorLink": _LINHALIS_CYAN,
+        "colorLinkHover": _LINHALIS_CYAN_HOVER,
+        "colorError": "#dc2626",
+        "colorWarning": "#f59e0b",
+        "colorSuccess": "#10b981",
+        "colorInfo": _LINHALIS_BLUE,
+        "colorTextBase": _LINHALIS_NAVY,
+        "colorBgBase": "#f7fcff",
+        "colorBgLayout": "#eef8fc",
+        "colorBgContainer": "#ffffff",
+        "colorBgElevated": "#ffffff",
+        "colorBgSpotlight": _LINHALIS_NAVY,
+        "colorBorder": "#ccebf4",
+        "colorBorderSecondary": "#e2f4fa",
         # Fonts
         "fontUrls": [],
         "fontFamily": "Inter, Helvetica, Arial, sans-serif",
@@ -978,8 +1019,24 @@ THEME_DARK: Optional[Theme] = {
     **THEME_DEFAULT,
     "token": {
         **THEME_DEFAULT["token"],
-        # Darker selection color for dark mode
-        "colorEditorSelection": "#5c4d1a",
+        "colorPrimary": _LINHALIS_CYAN,
+        "colorPrimaryHover": _LINHALIS_CYAN_HOVER,
+        "colorPrimaryActive": _LINHALIS_CYAN_ACTIVE,
+        "colorLink": _LINHALIS_SKY,
+        "colorLinkHover": _LINHALIS_ICE,
+        "colorError": "#fb7185",
+        "colorWarning": "#fbbf24",
+        "colorSuccess": "#34d399",
+        "colorInfo": _LINHALIS_SKY,
+        "colorBgBase": _LINHALIS_NAVY_DEEP,
+        "colorBgLayout": "#0b2137",
+        "colorBgContainer": _LINHALIS_NAVY,
+        "colorBgElevated": "#123756",
+        "colorBgSpotlight": "#174767",
+        "colorBorder": "#1d5874",
+        "colorBorderSecondary": "#173f59",
+        "colorTextBase": "#ecfbff",
+        "colorEditorSelection": "#0f5f7b",
     },
     "algorithm": "dark",
 }
@@ -1020,7 +1077,27 @@ THEME_FONT_URL_ALLOWED_DOMAINS: list[str] = [
 #     }]
 
 # This is merely a default
-EXTRA_SEQUENTIAL_COLOR_SCHEMES: list[dict[str, Any]] = []
+EXTRA_SEQUENTIAL_COLOR_SCHEMES: list[dict[str, Any]] = [
+    {
+        "id": "linhalisLinear",
+        "label": "linhalis linear",
+        "description": "Gradiente linear Linhalis para heatmaps e escalas de intensidade",
+        "isDiverging": False,
+        "isDefault": True,
+        "colors": [
+            "#ECFBFF",
+            "#DDF7FF",
+            "#C6F0FC",
+            "#AEEBFA",
+            "#6FDDF4",
+            "#42C7E8",
+            "#159CC5",
+            "#13577A",
+            "#102A43",
+            "#061827",
+        ],
+    },
+]
 
 # User used to execute cache warmup tasks
 # By default, the cache is warmed up using the primary owner. To fall back to using

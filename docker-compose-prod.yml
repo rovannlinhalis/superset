@@ -1,0 +1,33 @@
+#
+# Production compose for running Superset on a VM.
+# PostgreSQL and Redis are external services.
+#
+# Usage:
+#   1. cp docker/.env-prod.example docker/.env-prod
+#   2. Edit docker/.env-prod with the VM and PostgreSQL values
+#   3. docker compose -f docker-compose-prod.yml --env-file docker/.env-prod build
+#   4. docker compose -f docker-compose-prod.yml --env-file docker/.env-prod up -d
+#
+services:
+  superset:
+    build:
+      context: .
+      target: lean
+    image: superset-vm:latest
+    container_name: superset_app
+    restart: unless-stopped
+    env_file:
+      - docker/.env-prod
+    environment:
+      REDIS_HOST: "${REDIS_HOST:-192.168.15.74}"
+      REDIS_PORT: "${REDIS_PORT:-6379}"
+    ports:
+      - "${SUPERSET_PORT:-8088}:8088"
+    volumes:
+      - superset_home:/app/superset_home
+      # Hot-edit do superset_config.py sem rebuild: edite o arquivo no host e reinicie o container.
+      # O arquivo também é copiado para a imagem no build; este mount facilita ajustes na VM.
+      - ./docker/pythonpath/superset_config.py:/app/pythonpath/superset_config.py:ro
+
+volumes:
+  superset_home:
