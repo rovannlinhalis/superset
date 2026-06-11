@@ -2,12 +2,15 @@
 # Loaded automatically because PYTHONPATH=/app/pythonpath in the lean image.
 # Overrides any defaults defined in superset/config.py.
 
+import json
 import logging
 import os
 from urllib.parse import quote_plus
 
 from celery.schedules import crontab
+from flask_appbuilder.security.manager import AUTH_DB, AUTH_OAUTH
 from flask_caching.backends.filesystemcache import FileSystemCache
+from superset.security import SupersetSecurityManager
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +29,13 @@ def _bool_env(name: str, default: bool) -> bool:
     if value is None:
         return default
     return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _json_env(name: str, default: dict[str, list[str]]) -> dict[str, list[str]]:
+    value = os.getenv(name)
+    if not value:
+        return default
+    return json.loads(value)
 
 
 # ---------------------------------------------------------------------------
@@ -154,6 +164,75 @@ APP_ICON = os.getenv(
 LOGO_TOOLTIP = os.getenv("SUPERSET_LOGO_TOOLTIP", APP_NAME)
 LOGO_TARGET_PATH = "/superset/welcome/"
 FAVICONS = [{"href": "/static/assets/images/favicon.png"}]
+
+# ---------------------------------------------------------------------------
+# Autenticação — banco local por padrão, Keycloak quando habilitado
+# ---------------------------------------------------------------------------
+KEYCLOAK_ENABLED = _bool_env("KEYCLOAK_ENABLED", False)
+AUTH_TYPE = AUTH_DB
+
+if KEYCLOAK_ENABLED:
+    KEYCLOAK_BASE_URL = os.environ["KEYCLOAK_BASE_URL"].rstrip("/")
+    KEYCLOAK_REALM = os.environ["KEYCLOAK_REALM"]
+    KEYCLOAK_CLIENT_ID = os.environ["KEYCLOAK_CLIENT_ID"]
+    KEYCLOAK_CLIENT_SECRET = os.environ["KEYCLOAK_CLIENT_SECRET"]
+    KEYCLOAK_OPENID_URL = (
+        f"{KEYCLOAK_BASE_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect"
+    )
+
+    AUTH_TYPE = AUTH_OAUTH
+    AUTH_USER_REGISTRATION = _bool_env("KEYCLOAK_USER_REGISTRATION", True)
+    AUTH_USER_REGISTRATION_ROLE = os.getenv(
+        "KEYCLOAK_USER_REGISTRATION_ROLE",
+        "Gamma",
+    )
+    AUTH_ROLES_SYNC_AT_LOGIN = _bool_env("KEYCLOAK_ROLES_SYNC_AT_LOGIN", True)
+    AUTH_ROLES_MAPPING = _json_env("KEYCLOAK_ROLE_MAPPING", {})
+
+    OAUTH_PROVIDERS = [
+        {
+            "name": "keycloak",
+            "icon": "fa-key",
+            "token_key": "access_token",
+            "remote_app": {
+                "client_id": KEYCLOAK_CLIENT_ID,
+                "client_secret": KEYCLOAK_CLIENT_SECRET,
+                "api_base_url": f"{KEYCLOAK_OPENID_URL}/",
+                "access_token_url": f"{KEYCLOAK_OPENID_URL}/token",
+                "authorize_url": f"{KEYCLOAK_OPENID_URL}/auth",
+                "jwks_uri": f"{KEYCLOAK_OPENID_URL}/certs",
+                "client_kwargs": {
+                    "scope": os.getenv(
+                        "KEYCLOAK_SCOPE",
+                        "openid email profile",
+                    ),
+                },
+            },
+        },
+    ]
+
+
+class KeycloakSecurityManager(SupersetSecurityManager):
+    def oauth_user_info(self, provider, response=None):
+        if provider != "keycloak":
+            return super().oauth_user_info(provider, response)
+
+        userinfo = self.appbuilder.sm.oauth_remotes[provider].get("userinfo")
+        userinfo.raise_for_status()
+        data = userinfo.json()
+        username = data.get("preferred_username") or data.get("email")
+
+        return {
+            "username": username,
+            "first_name": data.get("given_name", ""),
+            "last_name": data.get("family_name", ""),
+            "email": data.get("email", username),
+            "role_keys": data.get("realm_access", {}).get("roles", []),
+        }
+
+
+if KEYCLOAK_ENABLED:
+    CUSTOM_SECURITY_MANAGER = KeycloakSecurityManager
 
 # ---------------------------------------------------------------------------
 # Tema — paleta Linhalis

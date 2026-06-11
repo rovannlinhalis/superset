@@ -251,6 +251,8 @@ RUN /app/docker/pip-install.sh --requires-build-essential -r requirements/base.t
 RUN uv pip install -e .
 # PostgreSQL driver (psycopg2) so Superset's metadata DB can point to an external Postgres
 RUN uv pip install .[postgres]
+# OAuth client used by Flask-AppBuilder for Keycloak login.
+RUN uv pip install authlib==1.6.12
 RUN python -m compileall /app/superset
 
 # Bake the production superset_config.py into the image (loaded via PYTHONPATH=/app/pythonpath)
