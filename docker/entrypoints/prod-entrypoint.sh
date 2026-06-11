@@ -66,6 +66,11 @@ echo "PostgreSQL is reachable."
 echo "Applying DB migrations..."
 superset db upgrade
 
+if [ -n "${PREVIOUS_SECRET_KEY:-}" ]; then
+    echo "Re-encrypting stored secrets with the current SUPERSET_SECRET_KEY..."
+    superset re-encrypt-secrets --previous_secret_key "${PREVIOUS_SECRET_KEY}"
+fi
+
 if [ "${SUPERSET_SKIP_ADMIN_CREATE:-false}" != "true" ]; then
     ADMIN_USERNAME="${ADMIN_USERNAME:-admin}"
     ADMIN_EMAIL="${ADMIN_EMAIL:-admin@superset.local}"
