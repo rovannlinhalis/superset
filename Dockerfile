@@ -26,7 +26,7 @@ ARG BUILD_TRANSLATIONS="false"
 ######################################################################
 # superset-node-ci used as a base for building frontend assets and CI
 ######################################################################
-FROM node:22-trixie-slim AS superset-node-ci
+FROM --platform=${BUILDPLATFORM} node:24-trixie-slim AS superset-node-ci
 ARG BUILD_TRANSLATIONS
 ENV BUILD_TRANSLATIONS=${BUILD_TRANSLATIONS}
 ARG DEV_MODE="false"           # Skip frontend build in dev mode
@@ -52,8 +52,23 @@ WORKDIR /app/superset-frontend
 RUN mkdir -p /app/superset/static/assets \
              /app/superset/translations
 
-COPY superset-frontend/package.json superset-frontend/package-lock.json ./
-RUN if [ "${DEV_MODE}" = "false" ]; then \
+# Harden `npm ci` against transient npm-registry network blips (e.g. ECONNRESET),
+# which otherwise fail the entire multi-platform image build with no retry.
+ENV npm_config_fetch_retries=5 \
+    npm_config_fetch_retry_mintimeout=20000 \
+    npm_config_fetch_retry_maxtimeout=120000 \
+    npm_config_fetch_timeout=600000
+
+# Mount package files and install dependencies if not in dev mode
+# NOTE: we mount packages and plugins as they are referenced in package.json as workspaces
+# ideally we'd COPY only their package.json. Here npm ci will be cached as long
+# as the full content of these folders don't change, yielding a decent cache reuse rate.
+# Note that it's not possible to selectively COPY or mount using blobs.
+RUN --mount=type=bind,source=./superset-frontend/package.json,target=./package.json \
+    --mount=type=bind,source=./superset-frontend/package-lock.json,target=./package-lock.json \
+    --mount=type=cache,target=/root/.cache \
+    --mount=type=cache,target=/root/.npm \
+    if [ "${DEV_MODE}" = "false" ]; then \
         npm ci; \
     else \
         echo "Skipping 'npm ci' in dev mode"; \
@@ -102,7 +117,7 @@ RUN useradd --user-group -d ${SUPERSET_HOME} -m --no-log-init --shell /bin/bash 
 COPY docker/*.sh /app/docker/
 RUN chmod 755 /app/docker/*.sh
 
-RUN pip install --no-cache-dir --upgrade uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 # Using uv as it's faster/simpler than pip
 RUN uv venv /app/.venv
@@ -191,6 +206,8 @@ RUN mkdir -p /app/data && chown -R superset:superset /app/data
 
 # Copy compiled things from previous stages
 COPY --from=superset-node /app/superset/static/assets superset/static/assets
+# Copy service.worker.js optionall as it doesn't exist when DEV_MODE=true
+COPY --from=superset-node /app/superset/static/service-worker.j[s] superset/static/service-worker.js
 
 # TODO, when the next version comes out, use --exclude superset/translations
 COPY superset superset
