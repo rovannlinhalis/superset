@@ -11,6 +11,8 @@ from flask_caching.backends.filesystemcache import FileSystemCache
 
 logger = logging.getLogger(__name__)
 
+PREVIOUS_SECRET_KEY = os.getenv("PREVIOUS_SECRET_KEY")
+
 
 def _csv_env(name: str, default: list[str]) -> list[str]:
     value = os.getenv(name)
