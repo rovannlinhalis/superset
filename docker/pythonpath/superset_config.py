@@ -7,9 +7,11 @@ import logging
 import os
 from urllib.parse import quote_plus
 
+import jwt
 from celery.schedules import crontab
 from flask_appbuilder.security.manager import AUTH_DB, AUTH_OAUTH
 from flask_caching.backends.filesystemcache import FileSystemCache
+from jwt.exceptions import PyJWTError
 from superset.security import SupersetSecurityManager
 
 logger = logging.getLogger(__name__)
@@ -189,7 +191,14 @@ if KEYCLOAK_ENABLED:
         "Gamma",
     )
     AUTH_ROLES_SYNC_AT_LOGIN = _bool_env("KEYCLOAK_ROLES_SYNC_AT_LOGIN", True)
-    AUTH_ROLES_MAPPING = _json_env("KEYCLOAK_ROLE_MAPPING", {})
+    AUTH_ROLES_MAPPING = _json_env(
+        "KEYCLOAK_ROLE_MAPPING",
+        {
+            "superset_admin": ["Admin"],
+            "superset_alpha": ["Alpha"],
+            "superset_gamma": ["Gamma"],
+        },
+    )
 
     OAUTH_PROVIDERS = [
         {
@@ -216,6 +225,22 @@ if KEYCLOAK_ENABLED:
 
 
 class KeycloakSecurityManager(SupersetSecurityManager):
+    @staticmethod
+    def _extract_roles(claims):
+        roles = set()
+        realm_access = claims.get("realm_access", {})
+        resource_access = claims.get("resource_access", {})
+
+        if isinstance(realm_access, dict):
+            roles.update(realm_access.get("roles", []))
+
+        if isinstance(resource_access, dict):
+            client_access = resource_access.get(KEYCLOAK_CLIENT_ID, {})
+            if isinstance(client_access, dict):
+                roles.update(client_access.get("roles", []))
+
+        return {role for role in roles if isinstance(role, str)}
+
     def oauth_user_info(self, provider, response=None):
         if provider != "keycloak":
             return super().oauth_user_info(provider, response)
@@ -224,13 +249,25 @@ class KeycloakSecurityManager(SupersetSecurityManager):
         userinfo.raise_for_status()
         data = userinfo.json()
         username = data.get("preferred_username") or data.get("email")
+        role_keys = self._extract_roles(data)
+
+        access_token = response.get("access_token") if response else None
+        if access_token:
+            try:
+                access_claims = jwt.decode(
+                    access_token,
+                    options={"verify_signature": False},
+                )
+                role_keys.update(self._extract_roles(access_claims))
+            except PyJWTError:
+                logger.warning("Could not decode Keycloak access token roles")
 
         return {
             "username": username,
             "first_name": data.get("given_name", ""),
             "last_name": data.get("family_name", ""),
             "email": data.get("email", username),
-            "role_keys": data.get("realm_access", {}).get("roles", []),
+            "role_keys": sorted(role_keys),
         }
 
 
