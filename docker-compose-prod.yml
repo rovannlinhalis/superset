@@ -5,8 +5,9 @@
 # Usage:
 #   1. cp docker/.env-prod.example docker/.env-prod
 #   2. Edit docker/.env-prod with the VM and PostgreSQL values
-#   3. docker compose -f docker-compose-prod.yml --env-file docker/.env-prod build
-#   4. docker compose -f docker-compose-prod.yml --env-file docker/.env-prod up -d
+#   3. docker compose -f docker-compose-prod.yml --env-file docker/.env-prod down --remove-orphans
+#   4. docker compose -f docker-compose-prod.yml --env-file docker/.env-prod build --no-cache --pull superset
+#   5. docker compose -f docker-compose-prod.yml --env-file docker/.env-prod up -d --force-recreate superset
 #
 services:
   superset:

@@ -164,6 +164,8 @@ APP_ICON = os.getenv(
 LOGO_TOOLTIP = os.getenv("SUPERSET_LOGO_TOOLTIP", APP_NAME)
 LOGO_TARGET_PATH = "/superset/welcome/"
 FAVICONS = [{"href": "/static/assets/images/favicon.png"}]
+ENABLE_PROXY_FIX = _bool_env("SUPERSET_ENABLE_PROXY_FIX", True)
+PREFERRED_URL_SCHEME = os.getenv("SUPERSET_PREFERRED_URL_SCHEME", "https")
 
 # ---------------------------------------------------------------------------
 # Autenticação — banco local por padrão, Keycloak quando habilitado
@@ -192,6 +194,7 @@ if KEYCLOAK_ENABLED:
     OAUTH_PROVIDERS = [
         {
             "name": "keycloak",
+            "label": os.getenv("KEYCLOAK_PROVIDER_LABEL", "Conta Linhalis"),
             "icon": "fa-key",
             "token_key": "access_token",
             "remote_app": {

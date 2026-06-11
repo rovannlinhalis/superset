@@ -532,22 +532,24 @@ def cached_common_bootstrap_data(  # pylint: disable=unused-argument
     if auth_type == AUTH_OAUTH:
         oauth_providers = []
         for provider in appbuilder.sm.oauth_providers:
-            oauth_providers.append(
-                {
-                    "name": provider["name"],
-                    "icon": provider["icon"],
-                }
-            )
+            oauth_provider = {
+                "name": provider["name"],
+                "icon": provider["icon"],
+            }
+            if label := provider.get("label"):
+                oauth_provider["label"] = label
+            oauth_providers.append(oauth_provider)
         frontend_config["AUTH_PROVIDERS"] = oauth_providers
     elif auth_type == AUTH_SAML:
         saml_providers = []
         for provider in appbuilder.sm.saml_providers:
-            saml_providers.append(
-                {
-                    "name": provider["name"],
-                    "icon": provider.get("icon", "fa-sign-in"),
-                }
-            )
+            saml_provider = {
+                "name": provider["name"],
+                "icon": provider.get("icon", "fa-sign-in"),
+            }
+            if label := provider.get("label"):
+                saml_provider["label"] = label
+            saml_providers.append(saml_provider)
         frontend_config["AUTH_PROVIDERS"] = saml_providers
 
     bootstrap_data = {
