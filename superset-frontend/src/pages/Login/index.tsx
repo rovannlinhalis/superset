@@ -38,11 +38,13 @@ import getBootstrapData from 'src/utils/getBootstrapData';
 type OAuthProvider = {
   name: string;
   icon: string;
+  label?: string;
 };
 
 type OIDProvider = {
   name: string;
   url: string;
+  label?: string;
 };
 
 type Provider = OAuthProvider | OIDProvider;
@@ -105,6 +107,9 @@ export default function Login() {
       ? `${base}${base.includes('?') ? '&' : '?'}next=${encodeURIComponent(nextUrl)}`
       : base;
   };
+
+  const getProviderButtonText = (provider: Provider) =>
+    provider.label || `${t('Sign in with')} ${capitalize(provider.name)}`;
 
   const authType: AuthType = bootstrapData.common.conf.AUTH_TYPE;
   const providers: Provider[] = bootstrapData.common.conf.AUTH_PROVIDERS;
@@ -174,7 +179,7 @@ export default function Login() {
                     iconPosition="start"
                     icon={getAuthIconElement(provider.name)}
                   >
-                    {t('Sign in with')} {capitalize(provider.name)}
+                    {getProviderButtonText(provider)}
                   </Button>
                 </Form.Item>
               ))}
@@ -193,7 +198,7 @@ export default function Login() {
                     iconPosition="start"
                     icon={getAuthIconElement(provider.name)}
                   >
-                    {t('Sign in with')} {capitalize(provider.name)}
+                    {getProviderButtonText(provider)}
                   </Button>
                 </Form.Item>
               ))}

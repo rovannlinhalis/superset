@@ -81,3 +81,20 @@ test('should render SAML provider buttons', () => {
   expect(screen.getByText('Sign in with Okta')).toBeInTheDocument();
   expect(screen.getByText('Sign in with Onelogin')).toBeInTheDocument();
 });
+
+test('should render configured provider label when present', () => {
+  mockGetBootstrapData.mockReturnValue({
+    common: {
+      conf: {
+        AUTH_TYPE: 4,
+        AUTH_PROVIDERS: [
+          { name: 'keycloak', icon: 'fa-key', label: 'Conta Linhalis' },
+        ],
+        AUTH_USER_REGISTRATION: false,
+      },
+    },
+  });
+  render(<Login />, { useRedux: true });
+  expect(screen.getByText('Conta Linhalis')).toBeInTheDocument();
+  expect(screen.queryByText('Sign in with Keycloak')).not.toBeInTheDocument();
+});
