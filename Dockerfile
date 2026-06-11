@@ -20,9 +20,6 @@
 ######################################################################
 ARG PY_VER=3.11.14-slim-trixie
 
-# If BUILDPLATFORM is null, set it to 'amd64' (or leave as is otherwise).
-ARG BUILDPLATFORM=${BUILDPLATFORM:-amd64}
-
 # Include translations in the final build
 ARG BUILD_TRANSLATIONS="false"
 
@@ -86,8 +83,7 @@ COPY superset-frontend /app/superset-frontend
 FROM superset-node-ci AS superset-node
 
 # Build the frontend if not in dev mode
-RUN --mount=type=cache,target=/root/.npm \
-    if [ "${DEV_MODE}" = "false" ]; then \
+RUN if [ "${DEV_MODE}" = "false" ]; then \
         echo "Running 'npm run ${BUILD_CMD}'"; \
         npm run ${BUILD_CMD}; \
     else \
@@ -118,7 +114,8 @@ RUN useradd --user-group -d ${SUPERSET_HOME} -m --no-log-init --shell /bin/bash 
     && chown -R superset:superset ${SUPERSET_HOME}
 
 # Some bash scripts needed throughout the layers
-COPY --chmod=755 docker/*.sh /app/docker/
+COPY docker/*.sh /app/docker/
+RUN chmod 755 /app/docker/*.sh
 
 RUN pip install --no-cache-dir --upgrade uv
 
@@ -136,8 +133,7 @@ ENV BUILD_TRANSLATIONS=${BUILD_TRANSLATIONS}
 
 # Install Python dependencies using docker/pip-install.sh
 COPY requirements/translations.txt requirements/
-RUN --mount=type=cache,target=/root/.cache/uv \
-    . /app/.venv/bin/activate && /app/docker/pip-install.sh --requires-build-essential -r requirements/translations.txt
+RUN . /app/.venv/bin/activate && /app/docker/pip-install.sh --requires-build-essential -r requirements/translations.txt
 
 COPY superset/translations/ /app/translations_mo/
 RUN if [ "${BUILD_TRANSLATIONS}" = "true" ]; then \
@@ -158,7 +154,8 @@ ENV SUPERSET_HOME="/app/superset_home" \
     SUPERSET_PORT="8088"
 
 # Copy the entrypoints, make them executable in userspace
-COPY --chmod=755 docker/entrypoints /app/docker/entrypoints
+COPY docker/entrypoints /app/docker/entrypoints
+RUN chmod -R 755 /app/docker/entrypoints
 
 WORKDIR /app
 # Set up necessary directories
@@ -176,8 +173,7 @@ ENV PLAYWRIGHT_BROWSERS_PATH=/usr/local/share/playwright-browsers
 
 ARG INCLUDE_CHROMIUM="false"
 ARG INCLUDE_FIREFOX="false"
-RUN --mount=type=cache,target=${SUPERSET_HOME}/.cache/uv \
-    if [ "${INCLUDE_CHROMIUM}" = "true" ] || [ "${INCLUDE_FIREFOX}" = "true" ]; then \
+RUN if [ "${INCLUDE_CHROMIUM}" = "true" ] || [ "${INCLUDE_FIREFOX}" = "true" ]; then \
         uv pip install playwright && \
         playwright install-deps && \
         if [ "${INCLUDE_CHROMIUM}" = "true" ]; then playwright install chromium; fi && \
@@ -192,7 +188,8 @@ COPY superset-frontend/package.json superset-frontend/
 COPY scripts/check-env.py scripts/
 
 # keeping for backward compatibility
-COPY --chmod=755 ./docker/entrypoints/run-server.sh /usr/bin/
+COPY ./docker/entrypoints/run-server.sh /usr/bin/
+RUN chmod 755 /usr/bin/run-server.sh
 
 # Some debian libs
 RUN /app/docker/apt-install.sh \
@@ -226,9 +223,22 @@ CMD ["/app/docker/entrypoints/run-server.sh"]
 EXPOSE ${SUPERSET_PORT}
 
 ######################################################################
-# Final lean image...
+# Final lean image (production)
 ######################################################################
 FROM python-common AS lean
+
+# Production defaults - override via docker/.env-prod or VM environment variables
+ENV SUPERSET_ENV="production" \
+    FLASK_DEBUG="false" \
+    SUPERSET_LOG_LEVEL="info" \
+    GUNICORN_LOGLEVEL="info" \
+    GUNICORN_TIMEOUT="120" \
+    SERVER_WORKER_AMOUNT="4" \
+    SERVER_WORKER_CLASS="gthread" \
+    SERVER_THREADS_AMOUNT="20" \
+    DATABASE_DIALECT="postgresql" \
+    DATABASE_PORT="5432" \
+    SUPERSET_LOAD_EXAMPLES="no"
 
 # Install Python dependencies using docker/pip-install.sh
 COPY requirements/base.txt requirements/
@@ -236,14 +246,20 @@ COPY requirements/base.txt requirements/
 # Copy superset-core package needed for editable install in base.txt
 COPY superset-core superset-core
 
-RUN --mount=type=cache,target=${SUPERSET_HOME}/.cache/uv \
-    /app/docker/pip-install.sh --requires-build-essential -r requirements/base.txt
+RUN /app/docker/pip-install.sh --requires-build-essential -r requirements/base.txt
 # Install the superset package
-RUN --mount=type=cache,target=${SUPERSET_HOME}/.cache/uv \
-    uv pip install -e .
+RUN uv pip install -e .
+# PostgreSQL driver (psycopg2) so Superset's metadata DB can point to an external Postgres
+RUN uv pip install .[postgres]
 RUN python -m compileall /app/superset
 
+# Bake the production superset_config.py into the image (loaded via PYTHONPATH=/app/pythonpath)
+COPY docker/pythonpath/superset_config.py /app/pythonpath/superset_config.py
+
 USER superset
+
+# Apply migrations, ensure admin user, then start gunicorn
+CMD ["/app/docker/entrypoints/prod-entrypoint.sh"]
 
 ######################################################################
 # Dev image...
@@ -264,11 +280,9 @@ COPY superset-core superset-core
 COPY superset-extensions-cli superset-extensions-cli
 
 # Install Python dependencies using docker/pip-install.sh
-RUN --mount=type=cache,target=${SUPERSET_HOME}/.cache/uv \
-    /app/docker/pip-install.sh --requires-build-essential -r requirements/development.txt
+RUN /app/docker/pip-install.sh --requires-build-essential -r requirements/development.txt
 # Install the superset package
-RUN --mount=type=cache,target=${SUPERSET_HOME}/.cache/uv \
-    uv pip install -e .
+RUN uv pip install -e .
 
 RUN uv pip install .[postgres]
 RUN python -m compileall /app/superset

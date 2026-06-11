@@ -414,7 +414,7 @@ AUTH_PASSWORD_COMMON_BLOCKLIST: list[str] = []
 # GLOBALS FOR APP Builder
 # ------------------------------
 # Uncomment to setup Your App name
-APP_NAME = "Superset"
+APP_NAME = os.getenv("SUPERSET_APP_NAME", "linhalis")
 
 # Specify the App icon
 # NOTE: This variable is used to populate THEME_DEFAULT. If you override this in
@@ -605,7 +605,7 @@ class D3TimeFormat(TypedDict, total=False):
 
 D3_TIME_FORMAT: D3TimeFormat = {}
 
-CURRENCIES = ["USD", "EUR", "GBP", "INR", "MXN", "JPY", "CNY"]
+CURRENCIES = ["BRL","USD", "EUR", "GBP", "INR", "MXN", "JPY", "CNY"]
 
 # ---------------------------------------------------
 # Feature flags
@@ -1016,7 +1016,28 @@ COMMON_BOOTSTRAP_OVERRIDES_FUNC: Callable[  # noqa: E731
 #     }]
 
 # This is merely a default
-EXTRA_CATEGORICAL_COLOR_SCHEMES: list[dict[str, Any]] = []
+EXTRA_CATEGORICAL_COLOR_SCHEMES: list[dict[str, Any]] = [
+    {
+        "id": "linhalis",
+        "label": "linhalis",
+        "description": "Paleta Linhalis para gráficos categóricos",
+        "isDefault": True,
+        "colors": [
+            "#102A43",
+            "#13577A",
+            "#159CC5",
+            "#AEEBFA",
+            "#DDF7FF",
+            "#0B3A57",
+            "#1E7898",
+            "#42C7E8",
+            "#6FDDF4",
+            "#7EA6B8",
+            "#174767",
+            "#ECFBFF",
+        ],
+    },
+]
 
 # -----------------------------------------------------------------------------
 # Theme System Configuration
@@ -1051,7 +1072,7 @@ _THEME_DEFAULT_BASE: Theme = {
         # Brand
         # Application name for window titles
         "brandAppName": APP_NAME,
-        "brandLogoAlt": "Apache Superset",
+        "brandLogoAlt": APP_NAME,
         "brandLogoUrl": APP_ICON,
         "brandLogoMargin": "18px 0",
         "brandLogoHref": LOGO_TARGET_PATH or "/",
@@ -1061,12 +1082,23 @@ _THEME_DEFAULT_BASE: Theme = {
         "brandSpinnerUrl": None,
         "brandSpinnerSvg": None,
         # Default colors
-        "colorPrimary": "#2893B3",  # NOTE: previous lighter primary color was #20a7c9 # noqa: E501
-        "colorLink": "#2893B3",
-        "colorError": "#e04355",
-        "colorWarning": "#fcc700",
-        "colorSuccess": "#5ac189",
-        "colorInfo": "#66bcfe",
+        "colorPrimary": _LINHALIS_CYAN,
+        "colorPrimaryHover": _LINHALIS_CYAN_HOVER,
+        "colorPrimaryActive": _LINHALIS_CYAN_ACTIVE,
+        "colorLink": _LINHALIS_CYAN,
+        "colorLinkHover": _LINHALIS_CYAN_HOVER,
+        "colorError": "#dc2626",
+        "colorWarning": "#f59e0b",
+        "colorSuccess": "#10b981",
+        "colorInfo": _LINHALIS_BLUE,
+        "colorTextBase": _LINHALIS_NAVY,
+        "colorBgBase": "#f7fcff",
+        "colorBgLayout": "#eef8fc",
+        "colorBgContainer": "#ffffff",
+        "colorBgElevated": "#ffffff",
+        "colorBgSpotlight": _LINHALIS_NAVY,
+        "colorBorder": "#ccebf4",
+        "colorBorderSecondary": "#e2f4fa",
         # Fonts
         "fontUrls": [],
         "fontFamily": "Inter, Helvetica, Arial, sans-serif",
@@ -1155,7 +1187,27 @@ THEME_FONT_URL_ALLOWED_DOMAINS: list[str] = [
 #     }]
 
 # This is merely a default
-EXTRA_SEQUENTIAL_COLOR_SCHEMES: list[dict[str, Any]] = []
+EXTRA_SEQUENTIAL_COLOR_SCHEMES: list[dict[str, Any]] = [
+    {
+        "id": "linhalisLinear",
+        "label": "linhalis linear",
+        "description": "Gradiente linear Linhalis para heatmaps e escalas de intensidade",
+        "isDiverging": False,
+        "isDefault": True,
+        "colors": [
+            "#ECFBFF",
+            "#DDF7FF",
+            "#C6F0FC",
+            "#AEEBFA",
+            "#6FDDF4",
+            "#42C7E8",
+            "#159CC5",
+            "#13577A",
+            "#102A43",
+            "#061827",
+        ],
+    },
+]
 
 # User used to execute cache warmup tasks
 # By default, the cache is warmed up using the primary owner. To fall back to using
