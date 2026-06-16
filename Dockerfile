@@ -246,11 +246,15 @@ COPY requirements/base.txt requirements/
 # Copy superset-core package needed for editable install in base.txt
 COPY superset-core superset-core
 
+RUN /app/docker/apt-install.sh \
+      pkg-config \
+      default-libmysqlclient-dev \
+      freetds-dev
 RUN /app/docker/pip-install.sh --requires-build-essential -r requirements/base.txt
 # Install the superset package
 RUN uv pip install -e .
-# PostgreSQL driver (psycopg2) so Superset's metadata DB can point to an external Postgres
-RUN uv pip install .[postgres]
+# Database drivers used by the production image.
+RUN /app/docker/pip-install.sh --requires-build-essential ".[postgres,mysql,mssql,gsheets]"
 # OAuth client used by Flask-AppBuilder for Keycloak login.
 RUN uv pip install authlib==1.6.12
 RUN python -m compileall /app/superset
