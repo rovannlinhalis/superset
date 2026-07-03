@@ -8,9 +8,9 @@ import os
 from urllib.parse import quote_plus
 
 import jwt
+from cachelib.redis import RedisCache
 from celery.schedules import crontab
 from flask_appbuilder.security.manager import AUTH_DB, AUTH_OAUTH
-from flask_caching.backends.redis import RedisCache
 from jwt.exceptions import PyJWTError
 from superset.security import SupersetSecurityManager
 
