@@ -10,6 +10,7 @@ from urllib.parse import quote_plus
 import jwt
 from celery.schedules import crontab
 from flask_appbuilder.security.manager import AUTH_DB, AUTH_OAUTH
+from flask_caching.backends.redis import RedisCache
 from jwt.exceptions import PyJWTError
 from superset.security import SupersetSecurityManager
 
@@ -170,11 +171,14 @@ RATELIMIT_STORAGE_URL = LIMITER_STORAGE_URL
 # ---------------------------------------------------------------------------
 # Stores async query results in Redis instead of in-memory
 # Required for async queries and distributed task execution
-RESULTS_BACKEND = {
-    "CACHE_TYPE": "RedisCache",
-    "CACHE_REDIS_URL": RESULTS_REDIS_URL,
-    "CACHE_DEFAULT_TIMEOUT": int(os.getenv("SUPERSET_RESULTS_CACHE_TIMEOUT", "259200")),  # 3 days
-}
+RESULTS_BACKEND = RedisCache(
+    host=REDIS_HOST,
+    port=REDIS_PORT,
+    db=REDIS_RESULTS_DB,
+    password=REDIS_PASSWORD or None,
+    default_timeout=int(os.getenv("SUPERSET_RESULTS_CACHE_TIMEOUT", "259200")),  # 3 days
+    key_prefix="superset_results_",
+)
 
 
 class CeleryConfig:
