@@ -70,6 +70,7 @@ REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
 REDIS_CELERY_DB = int(os.getenv("REDIS_CELERY_DB", "0"))
 REDIS_CACHE_DB = int(os.getenv("REDIS_CACHE_DB", "1"))
 REDIS_DATA_CACHE_DB = int(os.getenv("REDIS_DATA_CACHE_DB", "2"))
+REDIS_RESULTS_DB = int(os.getenv("REDIS_RESULTS_DB", "4"))
 REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", "")
 
 CACHE_TIMEOUT = int(os.getenv("SUPERSET_CACHE_TIMEOUT", "3600"))
@@ -88,6 +89,11 @@ if REDIS_PASSWORD:
         f"@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DATA_CACHE_DB}"
     )
     
+    RESULTS_REDIS_URL = (
+        f"redis://:{redis_password}"
+        f"@{REDIS_HOST}:{REDIS_PORT}/{REDIS_RESULTS_DB}"
+    )
+    
     _celery_broker_url = (
         f"redis://:{redis_password}"
         f"@{REDIS_HOST}:{REDIS_PORT}/{REDIS_CELERY_DB}"
@@ -99,6 +105,10 @@ else:
 
     DATA_CACHE_REDIS_URL = (
         f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DATA_CACHE_DB}"
+    )
+    
+    RESULTS_REDIS_URL = (
+        f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_RESULTS_DB}"
     )
     
     _celery_broker_url = (
@@ -134,6 +144,37 @@ EXPLORE_FORM_DATA_CACHE_CONFIG = {
 }
 
 THUMBNAIL_CACHE_CONFIG = CACHE_CONFIG
+
+# ---------------------------------------------------------------------------
+# Flask-Limiter — Rate limiting with Redis storage backend
+# ---------------------------------------------------------------------------
+# Configure Flask-Limiter to use Redis instead of in-memory storage
+# This prevents the UserWarning about in-memory storage not being recommended for production
+REDIS_LIMITER_DB = int(os.getenv("REDIS_LIMITER_DB", "3"))
+
+if REDIS_PASSWORD:
+    redis_password = quote_plus(REDIS_PASSWORD)
+    LIMITER_STORAGE_URL = (
+        f"redis://:{redis_password}"
+        f"@{REDIS_HOST}:{REDIS_PORT}/{REDIS_LIMITER_DB}"
+    )
+else:
+    LIMITER_STORAGE_URL = (
+        f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_LIMITER_DB}"
+    )
+
+RATELIMIT_STORAGE_URL = LIMITER_STORAGE_URL
+
+# ---------------------------------------------------------------------------
+# Results Backend — for async query execution (Issue #1021)
+# ---------------------------------------------------------------------------
+# Stores async query results in Redis instead of in-memory
+# Required for async queries and distributed task execution
+RESULTS_BACKEND = {
+    "CACHE_TYPE": "RedisCache",
+    "CACHE_REDIS_URL": RESULTS_REDIS_URL,
+    "CACHE_DEFAULT_TIMEOUT": int(os.getenv("SUPERSET_RESULTS_CACHE_TIMEOUT", "259200")),  # 3 days
+}
 
 
 class CeleryConfig:
