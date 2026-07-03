@@ -10,7 +10,6 @@ from urllib.parse import quote_plus
 import jwt
 from celery.schedules import crontab
 from flask_appbuilder.security.manager import AUTH_DB, AUTH_OAUTH
-from flask_caching.backends.filesystemcache import FileSystemCache
 from jwt.exceptions import PyJWTError
 from superset.security import SupersetSecurityManager
 
@@ -67,36 +66,85 @@ SQLALCHEMY_DATABASE_URI = (
 # Redis cache / Celery broker
 # ---------------------------------------------------------------------------
 REDIS_HOST = os.getenv("REDIS_HOST", "192.168.15.74")
-REDIS_PORT = os.getenv("REDIS_PORT", "6379")
-REDIS_CELERY_DB = os.getenv("REDIS_CELERY_DB", "0")
-REDIS_RESULTS_DB = os.getenv("REDIS_RESULTS_DB", "1")
+REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
+REDIS_CELERY_DB = int(os.getenv("REDIS_CELERY_DB", "0"))
+REDIS_CACHE_DB = int(os.getenv("REDIS_CACHE_DB", "1"))
+REDIS_DATA_CACHE_DB = int(os.getenv("REDIS_DATA_CACHE_DB", "2"))
 REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", "")
-_redis_auth = f":{quote_plus(REDIS_PASSWORD)}@" if REDIS_PASSWORD else ""
 
-RESULTS_BACKEND = FileSystemCache("/app/superset_home/sqllab")
+CACHE_TIMEOUT = int(os.getenv("SUPERSET_CACHE_TIMEOUT", "3600"))
+DATA_CACHE_TIMEOUT = int(os.getenv("SUPERSET_DATA_CACHE_TIMEOUT", "21600"))
+
+if REDIS_PASSWORD:
+    redis_password = quote_plus(REDIS_PASSWORD)
+
+    CACHE_REDIS_URL = (
+        f"redis://:{redis_password}"
+        f"@{REDIS_HOST}:{REDIS_PORT}/{REDIS_CACHE_DB}"
+    )
+
+    DATA_CACHE_REDIS_URL = (
+        f"redis://:{redis_password}"
+        f"@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DATA_CACHE_DB}"
+    )
+    
+    _celery_broker_url = (
+        f"redis://:{redis_password}"
+        f"@{REDIS_HOST}:{REDIS_PORT}/{REDIS_CELERY_DB}"
+    )
+else:
+    CACHE_REDIS_URL = (
+        f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_CACHE_DB}"
+    )
+
+    DATA_CACHE_REDIS_URL = (
+        f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DATA_CACHE_DB}"
+    )
+    
+    _celery_broker_url = (
+        f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_CELERY_DB}"
+    )
 
 CACHE_CONFIG = {
     "CACHE_TYPE": "RedisCache",
-    "CACHE_DEFAULT_TIMEOUT": 300,
-    "CACHE_KEY_PREFIX": "superset_",
-    "CACHE_REDIS_HOST": REDIS_HOST,
-    "CACHE_REDIS_PORT": REDIS_PORT,
-    "CACHE_REDIS_DB": REDIS_RESULTS_DB,
-    "CACHE_REDIS_PASSWORD": REDIS_PASSWORD or None,
+    "CACHE_DEFAULT_TIMEOUT": CACHE_TIMEOUT,
+    "CACHE_KEY_PREFIX": "superset_metadata_",
+    "CACHE_REDIS_URL": CACHE_REDIS_URL,
 }
-DATA_CACHE_CONFIG = CACHE_CONFIG
+
+DATA_CACHE_CONFIG = {
+    "CACHE_TYPE": "RedisCache",
+    "CACHE_DEFAULT_TIMEOUT": DATA_CACHE_TIMEOUT,
+    "CACHE_KEY_PREFIX": "superset_chart_data_",
+    "CACHE_REDIS_URL": DATA_CACHE_REDIS_URL,
+}
+
+FILTER_STATE_CACHE_CONFIG = {
+    "CACHE_TYPE": "RedisCache",
+    "CACHE_DEFAULT_TIMEOUT": 86400,
+    "CACHE_KEY_PREFIX": "superset_filter_state_",
+    "CACHE_REDIS_URL": CACHE_REDIS_URL,
+}
+
+EXPLORE_FORM_DATA_CACHE_CONFIG = {
+    "CACHE_TYPE": "RedisCache",
+    "CACHE_DEFAULT_TIMEOUT": 86400,
+    "CACHE_KEY_PREFIX": "superset_explore_form_",
+    "CACHE_REDIS_URL": CACHE_REDIS_URL,
+}
+
 THUMBNAIL_CACHE_CONFIG = CACHE_CONFIG
 
 
 class CeleryConfig:
-    broker_url = f"redis://{_redis_auth}{REDIS_HOST}:{REDIS_PORT}/{REDIS_CELERY_DB}"
+    broker_url = _celery_broker_url
     imports = (
         "superset.sql_lab",
         "superset.tasks.scheduler",
         "superset.tasks.thumbnails",
         "superset.tasks.cache",
     )
-    result_backend = f"redis://{_redis_auth}{REDIS_HOST}:{REDIS_PORT}/{REDIS_RESULTS_DB}"
+    result_backend = _celery_broker_url
     worker_prefetch_multiplier = 1
     task_acks_late = False
     beat_schedule = {
