@@ -434,8 +434,7 @@ LOGO_TARGET_PATH = None
 HIDE_NAVBAR_LOGO: bool = False
 
 # Specify tooltip that should appear when hovering over the App Icon/Logo
-# NOTE: This variable is deprecated and not used in the new theme system.
-LOGO_TOOLTIP = ""
+LOGO_TOOLTIP = os.getenv("SUPERSET_LOGO_TOOLTIP", APP_NAME)
 
 # Specify any text that should appear to the right of the logo
 # NOTE: This variable is deprecated and not used in the new theme system.
@@ -567,7 +566,7 @@ D3_FORMAT: D3Format = {}
 #    ]
 # Enable CORS and set map url in origins option.
 # Add also map url in connect-src of TALISMAN_CONFIG variable
-DECKGL_BASE_MAP: list[list[str, str]] = None
+DECKGL_BASE_MAP: list[list[str]] | None = None
 
 # Default map renderer for map visualizations that support multiple providers.
 # Set to "mapbox" only in deployments that also configure MAPBOX_API_KEY.
@@ -1062,11 +1061,15 @@ EXTRA_CATEGORICAL_COLOR_SCHEMES: list[dict[str, Any]] = [
 
 # Default theme configuration - foundation for all themes
 # This acts as the base theme for all users
-#
-# _THEME_DEFAULT_BASE is a private copy of the built-in defaults.
-# It is NOT overridden by ``from superset_config import *`` (underscore prefix)
-# and is used to deep-merge partial user overrides so that unspecified token
-# fields gracefully fall back to the built-in values.
+_LINHALIS_NAVY = "#102A43"
+_LINHALIS_NAVY_DEEP = "#061827"
+_LINHALIS_BLUE = "#13577A"
+_LINHALIS_CYAN = "#159CC5"
+_LINHALIS_CYAN_HOVER = "#2BBCE2"
+_LINHALIS_CYAN_ACTIVE = "#0F7EA3"
+_LINHALIS_ICE = "#DDF7FF"
+_LINHALIS_SKY = "#AEEBFA"
+
 _THEME_DEFAULT_BASE: Theme = {
     "token": {
         # Brand
@@ -1126,9 +1129,25 @@ THEME_DEFAULT: Theme = _THEME_DEFAULT_BASE
 _THEME_DARK_BASE: Theme = {
     **_THEME_DEFAULT_BASE,
     "token": {
-        **_THEME_DEFAULT_BASE["token"],
-        # Darker selection color for dark mode
-        "colorEditorSelection": "#5c4d1a",
+        **THEME_DEFAULT["token"],
+        "colorPrimary": _LINHALIS_CYAN,
+        "colorPrimaryHover": _LINHALIS_CYAN_HOVER,
+        "colorPrimaryActive": _LINHALIS_CYAN_ACTIVE,
+        "colorLink": _LINHALIS_SKY,
+        "colorLinkHover": _LINHALIS_ICE,
+        "colorError": "#fb7185",
+        "colorWarning": "#fbbf24",
+        "colorSuccess": "#34d399",
+        "colorInfo": _LINHALIS_SKY,
+        "colorBgBase": _LINHALIS_NAVY_DEEP,
+        "colorBgLayout": "#0b2137",
+        "colorBgContainer": _LINHALIS_NAVY,
+        "colorBgElevated": "#123756",
+        "colorBgSpotlight": "#174767",
+        "colorBorder": "#1d5874",
+        "colorBorderSecondary": "#173f59",
+        "colorTextBase": "#ecfbff",
+        "colorEditorSelection": "#0f5f7b",
     },
     "algorithm": "dark",
 }
@@ -1147,8 +1166,9 @@ def sync_theme_logo_href(
     re-run after those overrides so that setting only ``LOGO_TARGET_PATH`` updates
     the logo link without also having to override the whole theme object.
     """
-    if theme and logo_target_path and isinstance(theme.get("token"), dict):
-        theme["token"]["brandLogoHref"] = logo_target_path
+    token = theme.get("token") if theme else None
+    if logo_target_path and isinstance(token, dict):
+        token["brandLogoHref"] = logo_target_path
 
 
 # Theme behavior and user preference settings
@@ -3022,6 +3042,8 @@ if CONFIG_PATH_ENV_VAR in os.environ:
     try:
         module = sys.modules[__name__]
         spec = importlib.util.spec_from_file_location("superset_config", cfg_path)
+        if spec is None or spec.loader is None:
+            raise RuntimeError(f"Invalid configuration module spec for {cfg_path}")
         override_conf = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(override_conf)
         for key in dir(override_conf):
