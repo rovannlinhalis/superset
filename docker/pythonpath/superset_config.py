@@ -76,6 +76,7 @@ REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", "")
 
 CACHE_TIMEOUT = int(os.getenv("SUPERSET_CACHE_TIMEOUT", "3600"))
 DATA_CACHE_TIMEOUT = int(os.getenv("SUPERSET_DATA_CACHE_TIMEOUT", "21600"))
+CACHE_DEFAULT_TIMEOUT = -1
 
 if REDIS_PASSWORD:
     redis_password = quote_plus(REDIS_PASSWORD)
@@ -124,10 +125,7 @@ CACHE_CONFIG = {
 }
 
 DATA_CACHE_CONFIG = {
-    "CACHE_TYPE": "RedisCache",
-    "CACHE_DEFAULT_TIMEOUT": DATA_CACHE_TIMEOUT,
-    "CACHE_KEY_PREFIX": "superset_chart_data_",
-    "CACHE_REDIS_URL": DATA_CACHE_REDIS_URL,
+    "CACHE_TYPE": "NullCache",
 }
 
 FILTER_STATE_CACHE_CONFIG = {
@@ -502,10 +500,14 @@ EXTRA_SEQUENTIAL_COLOR_SCHEMES = [
 # Feature flags
 # ---------------------------------------------------------------------------
 FEATURE_FLAGS = {
+    # Desabilita execução assíncrona global de queries
+    "GLOBAL_ASYNC_QUERIES": False,
+    # Desabilita geração de thumbnails
+    "THUMBNAILS": False,
     # Embarcar dashboards em outros sistemas via SDK/iframe
     "EMBEDDED_SUPERSET": True,
-    # Alertas e Relatórios agendados (requer Celery worker + beat para realmente disparar)
-    "ALERT_REPORTS": True,
+    # Alertas e Relatórios agendados
+    "ALERT_REPORTS": False,
     # Aplica Row Level Security também em queries do SQL Lab
     "RLS_IN_SQLLAB": True,
     # Controle de acesso por dashboard via roles (necessário para RLS por dashboard)
