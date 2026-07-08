@@ -241,6 +241,8 @@ KEYCLOAK_ENABLED = _bool_env("KEYCLOAK_ENABLED", False)
 AUTH_TYPE = AUTH_DB
 
 if KEYCLOAK_ENABLED:
+    KEYCLOAK_PROVIDER_NAME = os.getenv("KEYCLOAK_PROVIDER_NAME", "keycloak")
+    KEYCLOAK_REDIRECT_URI = os.getenv("KEYCLOAK_REDIRECT_URI")
     KEYCLOAK_BASE_URL = os.environ["KEYCLOAK_BASE_URL"].rstrip("/")
     KEYCLOAK_REALM = os.environ["KEYCLOAK_REALM"]
     KEYCLOAK_CLIENT_ID = os.environ["KEYCLOAK_CLIENT_ID"]
@@ -267,7 +269,7 @@ if KEYCLOAK_ENABLED:
 
     OAUTH_PROVIDERS = [
         {
-            "name": "keycloak",
+            "name": KEYCLOAK_PROVIDER_NAME,
             "label": os.getenv("KEYCLOAK_PROVIDER_LABEL", "Conta Linhalis"),
             "icon": "fa-key",
             "token_key": "access_token",
@@ -284,6 +286,11 @@ if KEYCLOAK_ENABLED:
                         "openid email profile",
                     ),
                 },
+                **(
+                    {"redirect_uri": KEYCLOAK_REDIRECT_URI}
+                    if KEYCLOAK_REDIRECT_URI
+                    else {}
+                ),
             },
         },
     ]
@@ -307,7 +314,8 @@ class KeycloakSecurityManager(SupersetSecurityManager):
         return {role for role in roles if isinstance(role, str)}
 
     def oauth_user_info(self, provider, response=None):
-        if provider != "keycloak":
+        provider_name = os.getenv("KEYCLOAK_PROVIDER_NAME", "keycloak")
+        if provider != provider_name:
             return super().oauth_user_info(provider, response)
 
         userinfo = self.appbuilder.sm.oauth_remotes[provider].get("userinfo")
