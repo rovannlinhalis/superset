@@ -241,6 +241,10 @@ KEYCLOAK_ENABLED = _bool_env("KEYCLOAK_ENABLED", False)
 AUTH_TYPE = AUTH_DB
 
 if KEYCLOAK_ENABLED:
+    KEYCLOAK_REDIRECT_URI = os.getenv(
+        "KEYCLOAK_REDIRECT_URI",
+        "https://bi.linhalis.com/oauth-authorized/keycloak",
+    )
     KEYCLOAK_BASE_URL = os.environ["KEYCLOAK_BASE_URL"].rstrip("/")
     KEYCLOAK_REALM = os.environ["KEYCLOAK_REALM"]
     KEYCLOAK_CLIENT_ID = os.environ["KEYCLOAK_CLIENT_ID"]
@@ -255,7 +259,8 @@ if KEYCLOAK_ENABLED:
         "KEYCLOAK_USER_REGISTRATION_ROLE",
         "Gamma",
     )
-    AUTH_ROLES_SYNC_AT_LOGIN = _bool_env("KEYCLOAK_ROLES_SYNC_AT_LOGIN", True)
+    # Keep manual role/group assignments unless explicit sync is required.
+    AUTH_ROLES_SYNC_AT_LOGIN = _bool_env("KEYCLOAK_ROLES_SYNC_AT_LOGIN", False)
     AUTH_ROLES_MAPPING = _json_env(
         "KEYCLOAK_ROLE_MAPPING",
         {
@@ -284,6 +289,7 @@ if KEYCLOAK_ENABLED:
                         "openid email profile",
                     ),
                 },
+                "redirect_uri": KEYCLOAK_REDIRECT_URI,
             },
         },
     ]
