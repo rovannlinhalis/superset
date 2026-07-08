@@ -8,8 +8,6 @@ import os
 from urllib.parse import quote_plus
 
 import jwt
-from cachelib.redis import RedisCache
-from celery.schedules import crontab
 from flask_appbuilder.security.manager import AUTH_DB, AUTH_OAUTH
 from jwt.exceptions import PyJWTError
 from superset.security import SupersetSecurityManager
@@ -169,37 +167,17 @@ RATELIMIT_STORAGE_URL = LIMITER_STORAGE_URL
 # ---------------------------------------------------------------------------
 # Stores async query results in Redis instead of in-memory
 # Required for async queries and distributed task execution
-RESULTS_BACKEND = RedisCache(
-    host=REDIS_HOST,
-    port=REDIS_PORT,
-    db=REDIS_RESULTS_DB,
-    password=REDIS_PASSWORD or None,
-    default_timeout=int(os.getenv("SUPERSET_RESULTS_CACHE_TIMEOUT", "259200")),  # 3 days
-    key_prefix="superset_results_",
-)
+# Desabilitado temporariamente para reduzir componentes assíncronos em produção.
+RESULTS_BACKEND = None
 
 
 class CeleryConfig:
     broker_url = _celery_broker_url
-    imports = (
-        "superset.sql_lab",
-        "superset.tasks.scheduler",
-        "superset.tasks.thumbnails",
-        "superset.tasks.cache",
-    )
-    result_backend = _celery_broker_url
+    imports = ()
+    result_backend = None
     worker_prefetch_multiplier = 1
     task_acks_late = False
-    beat_schedule = {
-        "reports.scheduler": {
-            "task": "reports.scheduler",
-            "schedule": crontab(minute="*", hour="*"),
-        },
-        "reports.prune_log": {
-            "task": "reports.prune_log",
-            "schedule": crontab(minute=10, hour=0),
-        },
-    }
+    beat_schedule = {}
 
 
 CELERY_CONFIG = CeleryConfig
@@ -502,8 +480,18 @@ EXTRA_SEQUENTIAL_COLOR_SCHEMES = [
 FEATURE_FLAGS = {
     # Desabilita execução assíncrona global de queries
     "GLOBAL_ASYNC_QUERIES": False,
+    # Garante que SQL Lab não force execução assíncrona em Celery
+    "SQLLAB_FORCE_RUN_ASYNC": False,
     # Desabilita geração de thumbnails
     "THUMBNAILS": False,
+    # Mantém o backend de SQL Lab sem persistência assíncrona
+    "SQLLAB_BACKEND_PERSISTENCE": False,
+    # Mantém a engine de tarefas global desligada
+    "GLOBAL_TASK_FRAMEWORK": False,
+    # Mantém o runtime de screenshots desligado
+    "PLAYWRIGHT_REPORTS_AND_THUMBNAILS": False,
+    "ENABLE_DASHBOARD_SCREENSHOT_ENDPOINTS": False,
+    "ENABLE_DASHBOARD_DOWNLOAD_WEBDRIVER_SCREENSHOT": False,
     # Embarcar dashboards em outros sistemas via SDK/iframe
     "EMBEDDED_SUPERSET": True,
     # Alertas e Relatórios agendados
