@@ -92,7 +92,6 @@ test('should render SAML provider buttons', () => {
   expect(screen.getByText('Sign in with Onelogin')).toBeInTheDocument();
 });
 
-<<<<<<< HEAD
 const samlBootstrapData = {
   common: {
     conf: {
@@ -140,7 +139,8 @@ test('provider login links preserve the next param under a subdirectory', () => 
   } finally {
     window.history.replaceState({}, '', '/');
   }
-=======
+});
+
 test('should render configured provider label when present', () => {
   mockGetBootstrapData.mockReturnValue({
     common: {
@@ -156,5 +156,4 @@ test('should render configured provider label when present', () => {
   render(<Login />, { useRedux: true });
   expect(screen.getByText('Conta Linhalis')).toBeInTheDocument();
   expect(screen.queryByText('Sign in with Keycloak')).not.toBeInTheDocument();
->>>>>>> 0acf5a1b35 (feat: enhance Superset configuration for Keycloak integration and add Nginx proxy support)
 });

@@ -116,10 +116,7 @@ else:
     )
 
 CACHE_CONFIG = {
-    "CACHE_TYPE": "RedisCache",
-    "CACHE_DEFAULT_TIMEOUT": CACHE_TIMEOUT,
-    "CACHE_KEY_PREFIX": "superset_metadata_",
-    "CACHE_REDIS_URL": CACHE_REDIS_URL,
+    "CACHE_TYPE": "NullCache",
 }
 
 DATA_CACHE_CONFIG = {
@@ -127,17 +124,15 @@ DATA_CACHE_CONFIG = {
 }
 
 FILTER_STATE_CACHE_CONFIG = {
-    "CACHE_TYPE": "RedisCache",
+    "CACHE_TYPE": "SupersetMetastoreCache",
     "CACHE_DEFAULT_TIMEOUT": 86400,
-    "CACHE_KEY_PREFIX": "superset_filter_state_",
-    "CACHE_REDIS_URL": CACHE_REDIS_URL,
+    "REFRESH_TIMEOUT_ON_RETRIEVAL": True,
 }
 
 EXPLORE_FORM_DATA_CACHE_CONFIG = {
-    "CACHE_TYPE": "RedisCache",
+    "CACHE_TYPE": "SupersetMetastoreCache",
     "CACHE_DEFAULT_TIMEOUT": 86400,
-    "CACHE_KEY_PREFIX": "superset_explore_form_",
-    "CACHE_REDIS_URL": CACHE_REDIS_URL,
+    "REFRESH_TIMEOUT_ON_RETRIEVAL": True,
 }
 
 THUMBNAIL_CACHE_CONFIG = CACHE_CONFIG
@@ -161,6 +156,7 @@ else:
     )
 
 RATELIMIT_STORAGE_URL = LIMITER_STORAGE_URL
+RATELIMIT_ENABLED = False
 
 # ---------------------------------------------------------------------------
 # Results Backend — for async query execution (Issue #1021)
